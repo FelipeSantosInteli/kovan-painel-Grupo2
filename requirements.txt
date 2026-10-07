@@ -1,0 +1,9 @@
+pandas>=2.2
+numpy>=1.26
+matplotlib>=3.8
+openpyxl>=3.1
+scipy>=1.14
+scikit-learn>=1.5
+joblib>=1.4
+streamlit>=1.38
+pytest>=8.0
