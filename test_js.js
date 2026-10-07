@@ -9,7 +9,11 @@ const script2 = fs.readFileSync('calcular_churn_dinamico.js', 'utf8');
 eval(script1);
 eval(script2);
 
-const wb = xlsx.readFile('../datasets_case_modulo2_5yrs.xlsx');
+const arquivo = fs.existsSync('./datasets_case_modulo2_5yrs.xlsx')
+  ? './datasets_case_modulo2_5yrs.xlsx'
+  : (fs.existsSync('./datasets_case_modulo2.xlsx') ? './datasets_case_modulo2.xlsx' : './datasets_case_modulo2_5yrs.xlsx');
+
+const wb = xlsx.readFile(arquivo);
 const sheet = wb.Sheets[wb.SheetNames[0]];
 const linhas = xlsx.utils.sheet_to_json(sheet);
 

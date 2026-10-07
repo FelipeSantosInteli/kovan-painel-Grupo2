@@ -20,7 +20,7 @@
 (function (global) {
   "use strict";
 
-  var ULTIMO_MES = "2024-02";
+  var ULTIMO_MES = "2026-03";
   var DOBRAS = 5;
   var RIDGE = 1e-6;
   var TETO_DA_RAZAO = 10;
@@ -47,8 +47,10 @@
       var c = contas[id];
       if (!c) {
         // A base curta chamava estas colunas de segmento_lenovo e regiao.
-        c = contas[id] = { account_id: id, segment: l.segment || l.segmento_lenovo, country: l.country || l.regiao,
-                           churn: 0, meses: {}, r12: 0, r24: 0, r36: 0 };
+        c = contas[id] = {
+          account_id: id, segment: l.segment || l.segmento_lenovo, country: l.country || l.regiao,
+          churn: 0, meses: {}, r12: 0, r24: 0, r36: 0
+        };
       }
       if (Number(l.churn_label) > c.churn) c.churn = Number(l.churn_label);
       if (!(Number(l.qtd_pedidos) > 0)) return;
@@ -155,8 +157,8 @@
   function rodar(linhas, capacidade) {
     var menor = linhas.reduce(function (m, l) { var p = String(l.periodo); return p < m ? p : m; }, "9999");
     if (menor > ULTIMO_MES) {
-      throw new Error("esta planilha começa em " + menor + " e não tem histórico antes do corte de 07/03/2024. " +
-        "Use a base longa do case, datasets_case_modulo2.xlsx de cerca de 68 MB, que vai de 2021-04 a 2026-08.");
+      throw new Error("esta planilha começa em " + menor + " e não tem histórico antes do corte de 31/03/2026. " +
+        "Use a base longa do case, datasets_case_modulo2_5yrs.xlsx de cerca de 69,5 MB");
     }
     var t = tabela(linhas);
     if (t.length < 50) throw new Error("A planilha tem " + t.length + " contas elegíveis. Confira se é a aba Dataset 1 da base do case.");
@@ -200,8 +202,10 @@
      de 63%. */
   function contexto(r) {
     return {
-      modelo: { contas_elegiveis: r.contas, perdidas: r.perdidas, auc_fora_da_amostra: +r.auc.toFixed(4),
-                historico_ate: ULTIMO_MES, capacidade_do_ciclo: r.fila.length },
+      modelo: {
+        contas_elegiveis: r.contas, perdidas: r.perdidas, auc_fora_da_amostra: +r.auc.toFixed(4),
+        historico_ate: ULTIMO_MES, capacidade_do_ciclo: r.fila.length
+      },
       contas: r.fila.map(function (l) {
         return {
           posicao_na_fila: l.posicao, account_id: l.account_id, segmento: l.segment, pais: l.country,

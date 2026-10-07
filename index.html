@@ -766,6 +766,32 @@
       b.addEventListener("click", function () { perguntar(b.textContent); });
     });
     trilha();
+
+    // Carrega métricas pré-calculadas da raiz se disponíveis (suporte a GitHub Pages)
+    fetch('./calculated_metrics.json')
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (metrics) {
+        if (!metrics) return;
+        var formatNumber = function (num) { return new Intl.NumberFormat('pt-BR').format(num); };
+        var kpiArr = document.getElementById('kpi-arr');
+        if (kpiArr && metrics.ARR_formatted) {
+          kpiArr.textContent = metrics.ARR_formatted;
+          kpiArr.style.fontSize = '32px';
+        }
+        if (document.getElementById('kpi-p1') && metrics.P1 != null) {
+          document.getElementById('kpi-p1').textContent = formatNumber(metrics.P1);
+        }
+        if (document.getElementById('kpi-p2') && metrics.P2 != null) {
+          document.getElementById('kpi-p2').textContent = formatNumber(metrics.P2);
+        }
+        if (document.getElementById('kpi-p3') && metrics.P3 != null) {
+          document.getElementById('kpi-p3').textContent = formatNumber(metrics.P3);
+        }
+        if (document.getElementById('kpi-p4') && metrics.P4 != null) {
+          document.getElementById('kpi-p4').textContent = formatNumber(metrics.P4);
+        }
+      })
+      .catch(function () {});
   })();
   </script>
 </body>
