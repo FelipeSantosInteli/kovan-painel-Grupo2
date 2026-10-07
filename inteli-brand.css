@@ -1,0 +1,167 @@
+/* Tokens do Brandbook Inteli 2025.
+   Este e o unico arquivo do acervo autorizado a declarar cor e tipografia.
+   Qualquer outro arquivo consome var(--inteli-*) ou var(--seg-*).
+   Verificado por tools/check_brand.py.
+
+   As familias vem de assets/vendor/fontes/, servidas do proprio acervo:
+   antes eram dois @import para fonts.googleapis.com, e numa sala sem rede o
+   deck caia para as fontes do sistema. */
+
+
+
+
+:root {
+  /* Paleta cromática, p.66 */
+  --inteli-roxo: #2e2640;
+  --inteli-coral: #ff4545;
+  --inteli-verde-escuro: #066d73;
+  --inteli-cinza-escuro: #b2b6bf;
+  --inteli-cinza-medio: #caced6;
+  --inteli-cinza-claro: #e6eaeb;
+  --inteli-branco: #ffffff;
+
+  /* Segmento Exec e Pós/MBA, p.68.
+     Branco e cinzas como base, roxo e verde escuro como blocos de peso,
+     coral apenas como filete de destaque.
+     Lilás (Escolas) e verde claro (Graduação) ficam de fora: o
+     check_brand.py deste acervo reprova os dois. */
+  --seg-base: var(--inteli-branco);
+  --seg-superficie: var(--inteli-cinza-claro);
+  --seg-borda: var(--inteli-cinza-medio);
+  --seg-primaria: var(--inteli-roxo);
+  --seg-secundaria: var(--inteli-verde-escuro);
+  --seg-destaque: var(--inteli-coral);
+  --seg-texto: var(--inteli-roxo);
+  --seg-texto-suave: var(--inteli-cinza-escuro);
+  /* O verde escuro é cor de bloco ESCURO: texto sobre ele é sempre branco.
+     O par roxo-sobre-verde da Graduação não vale aqui (2,3:1, ilegível). */
+  --seg-texto-sobre-secundaria: var(--inteli-branco);
+
+  /* Tipografia, p.69 a p.74.
+     A Azurio e licenciada e este repositorio e publico: o proprio brandbook
+     (p.70) autoriza a Platypi como substituta por ser Google Font. */
+  --fonte-titulo: "Platypi", Georgia, serif;
+  --fonte-texto: "Manrope", system-ui, sans-serif;
+  --fonte-mono: "Space Mono", monospace;
+
+  /* Hierarquia. O brandbook (p.73) define 55/20/15pt em pagina de 1920x1080.
+     A razao entre os niveis e preservada; o corpo sobe para 18px porque
+     13px projetado nao se le do fundo da sala.
+
+     Estes quatro tokens PRECISAM morar em :root. Custom property nao
+     cascateia para fora do seletor que a declara: se elas cairem dentro de
+     um bloco como "code, pre", o body resolve font-size para o 16px padrao
+     do navegador e o piso de legibilidade vira letra morta, sem nenhum erro
+     aparecer. Conferir com getComputedStyle, nao a olho. */
+  --escala-titulo: 44px;
+  --escala-subtitulo: 26px;
+  --escala-texto: 20px;
+  --escala-complementar: 15px;
+}
+
+/* A aplicacao das familias e das escalas mora aqui e so aqui, porque o
+   check_brand.py proibe font-family em qualquer outro arquivo. Sem estas
+   regras os tokens acima ficam declarados e nunca usados, que foi exatamente
+   o defeito do CSS de 2026.1: ele pedia "Azurio" e a fonte nunca era
+   carregada, entao os titulos caiam no fallback em silencio. */
+body {
+  font-family: var(--fonte-texto);
+  font-size: var(--escala-texto);
+}
+
+h1, h2 {
+  font-family: var(--fonte-titulo);
+  font-weight: 500;  /* Azurio Medium e o peso de titulo do brandbook, p.69 */
+  font-size: var(--escala-titulo);
+}
+
+h3, h4 {
+  font-family: var(--fonte-titulo);
+  font-weight: 500;
+  font-size: var(--escala-subtitulo);
+}
+
+code, pre, kbd, samp, .mono {
+  font-family: var(--fonte-mono);
+  font-size: var(--escala-complementar);
+}
+
+/* Iconografia da marca, p.88: Google Material Symbols, nunca emoji. A fonte
+   e importada no topo deste arquivo; a classe que ativa a ligadura (o nome
+   do icone em texto vira glifo) so pode morar aqui, porque e a unica
+   declaracao de font-family autorizada no acervo. Consumidor: qualquer
+   <span class="material-symbols-outlined"> com o nome do icone como
+   conteudo de texto. */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tipografia dos componentes do Modulo 2: declarada aqui porque
+   font-family so pode existir neste arquivo (regra do check_brand). */
+.stat-tile .stat-numero,
+.leitura-timer .tempo {
+  font-family: var(--fonte-titulo);
+}
+
+.token-chip,
+.token-id,
+.embed-tabela td:first-child,
+.embed-tabela th:first-child {
+  font-family: var(--fonte-mono);
+}
+
+/* Tipografia das paginas fora do deck (portal). Declarada aqui pelo mesmo
+   motivo do bloco acima: font-family so pode existir neste arquivo. O portal
+   consome estas regras em vez de declarar a fonte por conta propria. */
+body.portal { font-family: var(--fonte-texto); }
+
+body.portal h1,
+body.portal h3,
+body.portal h4,
+body.portal th {
+  font-family: var(--fonte-titulo);
+}
+
+body.portal .eyebrow {
+  font-family: var(--fonte-mono);
+}
+
+/* Rotulo da faixa de conclusao. Declarado aqui porque font-family so pode
+   existir neste arquivo (brandbook p.69). */
+.faixa-conclusao .rotulo { font-family: var(--fonte-mono); }
+
+/* Componentes acrescentados na revisao de diagramacao. font-family so pode ser
+   declarado neste arquivo (brandbook p.69), entao as familias dos componentes
+   novos vivem aqui e o tema cuida de tamanho, cor e caixa. */
+.pratica-trilho .tempo,
+.quiz-cenario .numerao { font-family: var(--fonte-titulo); }
+
+.pratica-passo .num,
+.prompt-literal,
+.quiz-options li::before,
+.secao-condicoes .num { font-family: var(--fonte-mono); }
+
+/* O divisor usa a sem serifa na linha de apoio: 58px serifado contra 25px
+   serifado na mesma familia nao separava titulo de enunciado. */
+.section-slide h3 { font-family: var(--fonte-texto); }
+
+
+/* Token de linha de tabela. O cinza de borda mede 1,58:1 sobre branco e some
+   projetado; este e o mesmo roxo da marca a baixa opacidade, que sobrevive. */
+:root { --seg-cinza-linha: color-mix(in srgb, var(--inteli-roxo) 28%, var(--inteli-branco)); }
+
+/* O SVG embutido herda a familia do documento; estes dois papeis pedem a
+   serifa da marca, como qualquer titulo. */
+.diagrama-ciclo .fase-titulo { font-family: var(--fonte-titulo); }
+.diagrama-ciclo .fase-num { font-family: var(--fonte-mono); }

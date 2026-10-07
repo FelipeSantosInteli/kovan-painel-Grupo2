@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de retenção Kovan &middot; MBA Inteli x Lenovo</title>
+  <!--
+    Painel da Aula 08. Uma página, sem build: lê a planilha original do case,
+    treina o modelo no navegador (modelo.js), guarda os planos de ação de cada
+    área e conversa com uma equipe de três agentes no n8n.
+
+    Para criar a versão do grupo: a pasta frontend/ do repositório de prática
+    tem a mesma página pronta para abrir no Antigravity e modificar.
+
+    A planilha fica no navegador. Ao endpoint configurado vão só a fila do
+    ciclo, o resumo do modelo, os planos e o nome do modelo de linguagem.
+  -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Platypi:wght@500;600&family=Space+Mono&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+  <link rel="stylesheet" href="inteli-brand.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --seg-superficie: #0D1322;
+      --seg-base: #182030;
+      --seg-texto: #FFFFFF;
+      --seg-borda: #334155;
+      --seg-primaria: #1E293B;
+      --seg-secundaria: #38BDF8;
+      --seg-destaque: #F43F5E;
+      --inteli-branco: #FFFFFF;
+      --texto-suave: #8291A6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--seg-superficie); color: var(--seg-texto); font-size: 16px; font-family: "Manrope", sans-serif; }
+    h1, h2, h3, h4, h5, h6 { font-family: "Platypi", serif; }
+    p.ajuda { color: var(--texto-suave); }
+    a { color: var(--seg-secundaria); }
+    header.topo {
+      background: #0B101D; color: var(--seg-texto);
+      padding: 18px 32px 0; border-bottom: 4px solid var(--seg-borda);
+    }
+    .topo-linha { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; max-width: 1320px; margin: 0 auto; }
+    header.topo h1 { margin: 0; font-size: 28px; color: var(--seg-texto); }
+    header.topo p { margin: 0; font-size: 14px; color: var(--texto-suave); }
+    /* Trilha dos quatro passos: cada um acende quando fica pronto. */
+    .trilha { max-width: 1320px; margin: 16px auto 0; overflow-x: auto; }
+    .trilha ol { display: flex; margin: 0; padding: 0; }
+    .trilha li { list-style: none; flex: 1; min-width: 150px; padding: 10px 14px 12px; font-size: 14px;
+                 border-top: 3px solid transparent; display: flex; gap: 10px; align-items: center; }
+    .trilha .n { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+                 border: 2px solid var(--inteli-branco); font-weight: 700; font-size: 13px; flex: none; transition: background .4s; }
+    .trilha li.feito { border-top-color: var(--seg-secundaria); }
+    .trilha li.feito .n { background: var(--seg-secundaria); border-color: var(--seg-secundaria); }
+    main { max-width: 1320px; margin: 0 auto; padding: 24px 16px 64px;
+           display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; }
+    @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+    .coluna { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    section.bloco { background: var(--seg-base); border: 0; padding: 20px 22px; border-radius: 4px; }
+    .bloco h2 { margin: 0 0 4px; font-size: 21px; display: flex; gap: 12px; align-items: baseline; color: var(--seg-texto); }
+    .bloco h2 .num { color: var(--texto-suave); font-size: 15px; }
+    .bloco .ajuda { margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: var(--texto-suave); }
+    label { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 6px; color: var(--texto-suave); }
+    input[type=url], input[type=text], textarea, select, input[type=number] {
+      width: 100%; font: inherit; color: var(--seg-texto); background: var(--seg-superficie);
+      border: 1px solid var(--seg-borda); padding: 10px 12px; border-radius: 4px;
+    }
+    textarea { min-height: 110px; resize: vertical; font-size: 14px; line-height: 1.45; }
+    input:focus, textarea:focus, select:focus { outline: 2px solid var(--seg-secundaria); outline-offset: -1px; }
+    button, a.botao {
+      font: inherit; font-weight: 600; cursor: pointer; border: 0; padding: 10px 18px; border-radius: 4px;
+      background: var(--seg-borda); color: var(--seg-texto); text-decoration: none;
+      display: inline-flex; gap: 8px; align-items: center;
+    }
+    button.secundario, a.botao { background: var(--seg-superficie); color: var(--seg-texto); border: 1px solid var(--seg-borda); }
+    button.secundario:hover, a.botao:hover { filter: brightness(1.2); }
+    button:disabled { cursor: not-allowed; opacity: 0.6; }
+    .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+    .status { font-size: 14px; color: var(--texto-suave); }
+    .status.ok { color: var(--seg-secundaria); font-weight: 600; }
+    .status.erro { color: var(--seg-destaque); font-weight: 600; }
+    .material-symbols-outlined { font-size: 20px; }
+
+    /* 01: planilha */
+    .soltar { border: 2px dashed var(--seg-borda); padding: 22px; text-align: center; cursor: pointer; background: var(--seg-superficie); transition: border-color .2s, background .2s; border-radius: 4px; }
+    .soltar:hover, .soltar.ativo { border-color: var(--seg-secundaria); background: var(--seg-base); }
+    .soltar strong { display: flex; justify-content: center; gap: 8px; align-items: center; font-size: 17px; margin-bottom: 4px; color: var(--seg-texto); }
+    .etapas { list-style: none; padding: 0; margin: 14px 0 0; font-size: 14px; display: none; }
+    .etapas.visivel { display: block; }
+    .etapas li { display: flex; gap: 8px; align-items: center; padding: 3px 0; opacity: .45; transition: opacity .3s; color: var(--seg-texto); }
+    .etapas li.ativa, .etapas li.feita { opacity: 1; }
+    .etapas li.ativa .material-symbols-outlined { animation: girar 1s linear infinite; }
+    .etapas li.feita .material-symbols-outlined { color: var(--seg-secundaria); }
+    input[type=number] { width: 100px; font: inherit; padding: 8px 10px; border: 1px solid var(--seg-borda); background: var(--seg-superficie); color: var(--seg-texto); border-radius: 4px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+    @media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .kpi { border-left: 4px solid var(--seg-borda); background: var(--seg-superficie); padding: 10px 12px; animation: subir .5s both; border-radius: 0 4px 4px 0; }
+    .kpi:nth-child(2) { animation-delay: .08s; } .kpi:nth-child(3) { animation-delay: .16s; } .kpi:nth-child(4) { animation-delay: .24s; }
+    .kpi .v { font-size: 24px; font-weight: 500; margin: 0; white-space: nowrap; color: var(--seg-texto); }
+    .kpi .r { font-size: 13px; margin: 2px 0 0; color: var(--texto-suave); }
+    details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-top: 14px; color: var(--seg-texto); }
+    .pesos { display: grid; grid-template-columns: max-content 1fr max-content; gap: 6px 10px; align-items: center; font-size: 13px; margin-top: 10px; color: var(--seg-texto); }
+    .pesos .barra { height: 10px; background: var(--seg-superficie); position: relative; border-radius: 4px; overflow: hidden; }
+    .pesos .barra span { position: absolute; top: 0; height: 10px; transition: width .8s ease-out; }
+    .pesos .barra span.mais { left: 50%; background: var(--seg-destaque); }
+    .pesos .barra span.menos { right: 50%; background: var(--seg-secundaria); }
+    .pesos .barra::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1px solid var(--seg-borda); }
+    .tabela-rolagem { overflow-x: auto; margin-top: 14px; max-height: 320px; overflow-y: auto; border: 1px solid var(--seg-borda); border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; color: var(--seg-texto); }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--seg-borda); white-space: nowrap; }
+    th { position: sticky; top: 0; background: var(--seg-primaria); color: var(--texto-suave); font-weight: 600; }
+    td.n { text-align: right; font-variant-numeric: tabular-nums; }
+    tbody tr { cursor: pointer; transition: background .2s; }
+    tbody tr:hover td { background: var(--seg-superficie); }
+    tr.perdida td:first-child { border-left: 4px solid var(--seg-destaque); }
+    .legenda { font-size: 12px; margin: 6px 0 0; color: var(--texto-suave); }
+
+    /* 02: planos */
+    .abas { display: flex; border-bottom: 2px solid var(--seg-primaria); margin-top: 6px; }
+    .abas button { background: var(--seg-base); color: var(--seg-primaria); padding: 8px 16px; }
+    .abas button[aria-selected=true] { background: var(--seg-primaria); color: var(--inteli-branco); }
+    .aba { display: none; padding-top: 10px; }
+    .aba.ativa { display: block; }
+
+    /* 04: a equipe */
+    .chat { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 680px; position: sticky; top: 16px; }
+    .equipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+    @media (max-width: 560px) { .equipe { grid-template-columns: 1fr; } }
+    .agente { border-left: 4px solid var(--seg-borda); background: var(--seg-superficie); padding: 10px 12px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; position: relative; overflow: hidden; transition: border-color .3s; border-radius: 0 4px 4px 0; }
+    .avatar { grid-row: span 3; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+              background: var(--seg-borda); color: var(--seg-texto); position: relative; }
+    .avatar .material-symbols-outlined { font-size: 24px; }
+    .agente[data-agente=vera] .avatar { background: var(--seg-secundaria); }
+    .agente[data-agente=gilberto] .avatar { background: #8e44ad; }
+    .agente[data-agente=ciro] .avatar { background: var(--seg-destaque); }
+    .agente .nome { font-weight: 700; font-size: 15px; }
+    .agente .papel { font-size: 12px; }
+    .agente .estado { font-size: 12px; font-weight: 600; display: flex; gap: 4px; align-items: center; }
+    .agente.trabalhando { border-color: var(--seg-secundaria); }
+    .agente.trabalhando .avatar::after { content: ""; position: absolute; inset: -5px; border-radius: 50%;
+      border: 2px solid var(--seg-secundaria); animation: pulso 1.2s ease-out infinite; }
+    .agente.trabalhando::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--seg-secundaria), transparent); animation: varrer 1.4s linear infinite; }
+    .agente.pronto .estado { color: var(--seg-secundaria); }
+    .pontos span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; margin-left: 2px; animation: ponto 1s infinite; }
+    .pontos span:nth-child(2) { animation-delay: .15s; } .pontos span:nth-child(3) { animation-delay: .3s; }
+    .modelo-linha { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 10px; }
+    .modelo-linha > div { flex: 1; min-width: 220px; }
+    .modelo-linha label { margin-top: 0; }
+    .mensagens { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 12px; }
+    .msg { max-width: 92%; padding: 12px 14px; line-height: 1.5; white-space: pre-wrap; font-size: 15px; animation: subir .35s both; }
+    .msg.eu { align-self: flex-end; background: var(--seg-borda); color: var(--seg-texto); border-radius: 4px; }
+    .msg.agente-msg { align-self: flex-start; background: var(--seg-superficie); border-left: 4px solid var(--seg-borda); border-radius: 0 4px 4px 0; }
+    .msg.agente-msg[data-agente=vera] { border-left-color: var(--seg-secundaria); }
+    .msg.agente-msg[data-agente=gilberto] { border-left-color: #8e44ad; }
+    .msg.agente-msg[data-agente=ciro] { border-left-color: var(--seg-destaque); background: var(--seg-base); }
+    .msg .quem { display: flex; gap: 6px; align-items: center; font-weight: 700; font-size: 13px; margin-bottom: 4px; white-space: normal; color: var(--seg-texto); }
+    .msg .quem small { font-weight: 500; color: var(--texto-suave); }
+    .selo { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; font-weight: 700; padding: 2px 8px; margin-left: auto;
+            background: var(--seg-secundaria); color: var(--seg-texto); border-radius: 4px; }
+    .selo.corrigido { background: var(--seg-destaque); }
+    .msg.aviso { align-self: center; font-size: 13px; background: transparent; padding: 4px; text-align: center; color: var(--seg-destaque); }
+    .msg.rodape { align-self: flex-start; font-size: 12px; padding: 0 2px; color: var(--texto-suave); }
+    .sugestoes { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .sugestoes button { font-size: 13px; font-weight: 500; padding: 6px 10px; }
+    .enviar { display: flex; gap: 8px; }
+    .enviar textarea { min-height: 52px; height: 52px; }
+    footer { text-align: center; font-size: 13px; padding: 0 16px 32px; }
+
+    @keyframes girar { to { transform: rotate(360deg); } }
+    @keyframes pulso { from { transform: scale(.9); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+    @keyframes varrer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    @keyframes ponto { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+    @keyframes subir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-linha">
+      <h1>Painel de retenção Kovan LATAM Grupo2</h1>
+      <p>MBA em IA e Dados para Negócios &middot; Inteli x Lenovo &middot; Aula 08</p>
+    </div>
+    <nav class="trilha" aria-label="Passos do painel"><ol>
+      <li id="t1"><span class="n">1</span>Planilha e modelo</li>
+      <li id="t2"><span class="n">2</span>Planos de ação</li>
+      <li id="t3"><span class="n">3</span>Conexão com o n8n</li>
+      <li id="t4"><span class="n">4</span>Conversa com a equipe</li>
+    </ol></nav>
+  </header>
+
+  <main>
+    <div class="coluna">
+      <section class="bloco" id="bloco-planilha">
+        <h2><span class="num">01</span>Planilha original e modelo</h2>
+        <p class="ajuda">A planilha do case, <code>datasets_case_modulo2.xlsx</code>, como chegou. O painel lê a aba <em>Dataset 1</em>, treina uma regressão logística aqui no navegador e monta a fila do ciclo. Nada sai do seu computador nesta etapa.</p>
+        <div class="soltar" id="soltar" tabindex="0" role="button">
+          <strong><span class="material-symbols-outlined">upload_file</span>Arraste a planilha aqui ou clique para escolher</strong>
+          <span id="nome-arquivo" class="status">Nenhum arquivo carregado</span>
+        </div>
+        <input id="arquivo" type="file" accept=".xlsx,.xls,.csv" hidden>
+        <ul class="etapas" id="etapas">
+          <li data-e="ler"><span class="material-symbols-outlined">progress_activity</span>Lendo a aba Dataset 1</li>
+          <li data-e="colunas"><span class="material-symbols-outlined">progress_activity</span>Montando seis colunas por conta, com histórico até 2024-02</li>
+          <li data-e="treino"><span class="material-symbols-outlined">progress_activity</span>Treinando a regressão logística em 5 dobras</li>
+          <li data-e="fila"><span class="material-symbols-outlined">progress_activity</span>Ordenando a fila por valor esperado</li>
+        </ul>
+        <div class="linha">
+          <label for="capacidade" style="margin:0">Capacidade do ciclo, em contas</label>
+          <input id="capacidade" type="number" min="10" max="500" value="138">
+        </div>
+        <div id="resumo" hidden>
+          <div class="kpis">
+            <div class="kpi"><h4 class="v" id="k-contas">-</h4><p class="r">contas elegíveis</p></div>
+            <div class="kpi"><h4 class="v" id="k-auc">-</h4><p class="r">AUC fora da amostra</p></div>
+            <div class="kpi"><h4 class="v" id="k-acertos">-</h4><p class="r">perdidas na fila</p></div>
+            <div class="kpi"><h4 class="v" id="k-esperado">-</h4><p class="r">valor esperado da fila, USD</p></div>
+          </div>
+          <details>
+            <summary>Peso de cada coluna no modelo</summary>
+            <p class="ajuda" style="margin-top:8px">Coeficiente da regressão logística sobre a coluna padronizada. Para a direita, aumenta a chance de perda.</p>
+            <div class="pesos" id="pesos"></div>
+          </details>
+          <div class="tabela-rolagem"><table id="tabela"></table></div>
+          <p class="legenda">Clique numa conta para perguntar à equipe sobre ela. Barra vermelha à esquerda: conta marcada como perdida no case.</p>
+        </div>
+      </section>
+
+      <section class="bloco" id="bloco-grafico" style="background: #141A29; border-radius: 8px; padding: 20px;">
+        <h2 style="color: #FFFFFF;"><span class="material-symbols-outlined">bar_chart</span>Evolução de Churns por Mês</h2>
+        <p class="ajuda" style="color: #94A3B8;">Quantidade de contas perdidas por mês no dataset histórico.</p>
+        <canvas id="churnChart" style="max-height: 350px; margin-top: 20px;"></canvas>
+      </section>
+
+      <section class="bloco" id="bloco-resumo-financeiro" style="background: #182030; color: #FFFFFF;">
+        <h2 style="color: #FFFFFF;"><span class="material-symbols-outlined">account_balance_wallet</span>Resumo Financeiro</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;">
+          <!-- Card 1: Receita Anual em Risco -->
+          <div style="border-left: 4px solid #F43F5E; background: #0D1322; padding: 20px; border-radius: 0 4px 4px 0;">
+            <h3 style="margin: 0 0 8px; font-size: 16px; color: #8291A6; font-weight: 600;">Receita Anual em Risco</h3>
+            <div id="kpi-arr" style="font-size: 24px; font-weight: bold; margin-bottom: 8px; color: #FFFFFF; font-family: 'Manrope', sans-serif;">Aguardando execução do modelo...</div>
+            <p style="margin: 0; font-size: 13px; color: #8291A6; line-height: 1.4;">Perda anual estimada (Erosão + Churn) nas contas em alerta (Prob >= 50%).</p>
+          </div>
+          
+          <!-- Card 2: NRR Atual -->
+          <div style="border-left: 4px solid #38BDF8; background: #0D1322; padding: 20px; border-radius: 0 4px 4px 0;">
+            <h3 style="margin: 0 0 8px; font-size: 16px; color: #8291A6; font-weight: 600;">Net Revenue Retention (NRR)</h3>
+            <div id="kpi-nrr" style="font-size: 24px; font-weight: bold; margin-bottom: 8px; color: #FFFFFF; font-family: 'Manrope', sans-serif;">Aguardando execução do modelo...</div>
+            <p style="margin: 0; font-size: 13px; color: #8291A6; line-height: 1.4;">Meta: Reverter curva rumo a &gt;100%.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="bloco" id="bloco-personas" style="background: #182030; color: #FFFFFF;">
+        <h2 style="color: #FFFFFF;"><span class="material-symbols-outlined">group</span>Risco de Churn por Persona B2B</h2>
+          <!-- Card P1 -->
+          <div style="border-left: 4px solid #10B981; background: #0D1322; padding: 16px; border-radius: 0 4px 4px 0; position: relative;">
+            <button id="btn-export-P1" onclick="window.exportarCSV('P1')" style="position: absolute; top: 12px; right: 12px; background: #1E293B; border: none; color: #FFFFFF; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; display: none;" onmouseover="this.style.background='#10B981'" onmouseout="this.style.background='#1E293B'">Baixar CSV</button>
+            <h3 style="margin: 0 0 8px; font-size: 14px; color: #8291A6; padding-right: 70px;">Risco P1 &middot; Champions</h3>
+            <div id="kpi-p1" style="font-size: 20px; font-weight: bold; margin-bottom: 8px; font-family: 'Manrope', sans-serif;">Aguardando modelo...</div>
+            <p style="margin: 0; font-size: 11px; color: #8291A6; line-height: 1.4;">Gatilho: Prob. >= 50%<br>Ação: Intervenção KAM + QBR Trimestral</p>
+          </div>
+          <!-- Card P2 -->
+          <div style="border-left: 4px solid #D97706; background: #0D1322; padding: 16px; border-radius: 0 4px 4px 0; position: relative;">
+            <button id="btn-export-P2" onclick="window.exportarCSV('P2')" style="position: absolute; top: 12px; right: 12px; background: #1E293B; border: none; color: #FFFFFF; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; display: none;" onmouseover="this.style.background='#D97706'" onmouseout="this.style.background='#1E293B'">Baixar CSV</button>
+            <h3 style="margin: 0 0 8px; font-size: 14px; color: #8291A6; padding-right: 70px;">Risco P2 &middot; Projetos Capex</h3>
+            <div id="kpi-p2" style="font-size: 20px; font-weight: bold; margin-bottom: 8px; font-family: 'Manrope', sans-serif;">Aguardando modelo...</div>
+            <p style="margin: 0; font-size: 11px; color: #8291A6; line-height: 1.4;">Gatilho: Prob. >= 50%<br>Ação: Mapear Projeto + Premier Support</p>
+          </div>
+          <!-- Card P3 -->
+          <div style="border-left: 4px solid #EA580C; background: #0D1322; padding: 16px; border-radius: 0 4px 4px 0; position: relative;">
+            <button id="btn-export-P3" onclick="window.exportarCSV('P3')" style="position: absolute; top: 12px; right: 12px; background: #1E293B; border: none; color: #FFFFFF; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; display: none;" onmouseover="this.style.background='#EA580C'" onmouseout="this.style.background='#1E293B'">Baixar CSV</button>
+            <h3 style="margin: 0 0 8px; font-size: 14px; color: #8291A6; padding-right: 70px;">Risco P3 &middot; Pequenos Recorrentes</h3>
+            <div id="kpi-p3" style="font-size: 20px; font-weight: bold; margin-bottom: 8px; font-family: 'Manrope', sans-serif;">Aguardando modelo...</div>
+            <p style="margin: 0; font-size: 11px; color: #8291A6; line-height: 1.4;">Gatilho: Prob. >= 50%<br>Ação: Automotização CRM (Ofertas Casadas)</p>
+          </div>
+          <!-- Card P4 -->
+          <div style="border-left: 4px solid #F43F5E; background: #0D1322; padding: 16px; border-radius: 0 4px 4px 0; position: relative;">
+            <button id="btn-export-P4" onclick="window.exportarCSV('P4')" style="position: absolute; top: 12px; right: 12px; background: #1E293B; border: none; color: #FFFFFF; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; display: none;" onmouseover="this.style.background='#F43F5E'" onmouseout="this.style.background='#1E293B'">Baixar CSV</button>
+            <h3 style="margin: 0 0 8px; font-size: 14px; color: #8291A6; padding-right: 70px;">Risco P4 &middot; Transacionais</h3>
+            <div id="kpi-p4" style="font-size: 20px; font-weight: bold; margin-bottom: 8px; font-family: 'Manrope', sans-serif;">Aguardando modelo...</div>
+            <p style="margin: 0; font-size: 11px; color: #8291A6; line-height: 1.4;">Gatilho: Prob. >= 50%<br>Ação: Nurturing Digital 24x7 no E-commerce</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="bloco" id="bloco-planos">
+        <h2><span class="num">02</span>Planos de ação por área</h2>
+        <p class="ajuda">A Vera, estrategista da equipe, só recomenda o que estiver escrito aqui. Os textos são exemplos: substitua pelo plano do grupo, com o limiar numérico de cada item.</p>
+        <div class="abas" role="tablist">
+          <button type="button" role="tab" aria-selected="true" data-aba="comercial">Comercial</button>
+          <button type="button" role="tab" aria-selected="false" data-aba="atendimento">Atendimento</button>
+          <button type="button" role="tab" aria-selected="false" data-aba="posvendas">Pós-vendas</button>
+        </div>
+        <div class="aba ativa" data-aba="comercial"><textarea id="plano-comercial" aria-label="Plano da área comercial"></textarea></div>
+        <div class="aba" data-aba="atendimento"><textarea id="plano-atendimento" aria-label="Plano da área de atendimento"></textarea></div>
+        <div class="aba" data-aba="posvendas"><textarea id="plano-posvendas" aria-label="Plano da área de pós-vendas"></textarea></div>
+        <div class="linha"><button id="restaurar" class="secundario" type="button">Restaurar exemplos</button>
+          <span class="status">Os planos ficam salvos neste navegador.</span></div>
+      </section>
+
+      <section class="bloco" id="bloco-conexao">
+        <h2><span class="num">03</span>Conexão com a equipe no n8n</h2>
+        <p class="ajuda">Baixe o workflow, importe no n8n, escolha a sua credencial OpenRouter nos três nós de modelo, troque <code>NOME_DO_GRUPO</code> no caminho do Webhook e ative. Cole aqui a URL de produção.</p>
+        <a class="botao" href="workflow_n8n.json" download="kovan-equipe-de-agentes.json"><span class="material-symbols-outlined">download</span>Baixar workflow do n8n</a>
+        <label for="endpoint">Endpoint</label>
+        <input id="endpoint" type="url" placeholder="https://inteli.app.n8n.cloud/webhook/kovan-chat-NOME_DO_GRUPO">
+        <div class="linha">
+          <button id="testar" class="secundario" type="button"><span class="material-symbols-outlined">wifi_tethering</span>Testar conexão</button>
+          <span id="status-conexao" class="status"></span>
+        </div>
+      </section>
+    </div>
+
+    <div class="coluna">
+      <section class="bloco chat">
+        <h2><span class="num">04</span>Conversa com a equipe de agentes</h2>
+        <p class="ajuda">Cada pergunta passa por quatro agentes, em sequência, no n8n. Cada um usa o modelo de linguagem escolhido abaixo.</p>
+        <div class="equipe">
+          <div class="agente" data-agente="atlas"><div class="avatar"><span class="material-symbols-outlined">query_stats</span></div>
+            <span class="nome">Atlas</span><span class="papel">Analista da fila</span><span class="estado">aguardando</span></div>
+          <div class="agente" data-agente="vera"><div class="avatar"><span class="material-symbols-outlined">flag</span></div>
+            <span class="nome">Vera</span><span class="papel">Estrategista</span><span class="estado">aguardando</span></div>
+          <div class="agente" data-agente="gilberto"><div class="avatar"><span class="material-symbols-outlined">campaign</span></div>
+            <span class="nome">Gilberto</span><span class="papel">Especialista Mkt</span><span class="estado">aguardando</span></div>
+          <div class="agente" data-agente="ciro"><div class="avatar"><span class="material-symbols-outlined">fact_check</span></div>
+            <span class="nome">Ciro</span><span class="papel">Revisor</span><span class="estado">aguardando</span></div>
+        </div>
+        <div class="modelo-linha">
+          <div>
+            <label for="modelo-llm">Modelo de linguagem, via OpenRouter</label>
+            <select id="modelo-llm">
+              <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super, gratuito</option>
+              <option value="qwen/qwen3.8-27b:free">Qwen 3.8 27B, gratuito</option>
+              <option value="typesafe/jev-router">Jev Router, TypeSafe System One (pago por uso)</option>
+              <option value="outro">Outro identificador...</option>
+            </select>
+          </div>
+          <div id="modelo-outro-caixa" hidden>
+            <label for="modelo-outro">Identificador no OpenRouter</label>
+            <input id="modelo-outro" type="text" placeholder="fornecedor/modelo:free">
+          </div>
+        </div>
+        <div class="mensagens" id="mensagens" aria-live="polite">
+          <div class="msg aviso">Carregue a planilha e configure o endpoint para começar.</div>
+        </div>
+        <div class="sugestoes" id="sugestoes">
+          <button type="button" class="secundario">Quais as cinco primeiras contas da fila e por quê?</button>
+          <button type="button" class="secundario">Qual área deve atuar na primeira conta da fila, e com qual ação?</button>
+          <button type="button" class="secundario">Quanto a primeira conta comprou em 2025?</button>
+          <button type="button" class="secundario">Posso oferecer 15% de desconto à primeira conta?</button>
+        </div>
+        <form class="enviar" id="form">
+          <textarea id="pergunta" placeholder="Pergunte sobre a fila, uma conta ou o plano de uma área" aria-label="Pergunta"></textarea>
+          <button id="enviar" type="submit"><span class="material-symbols-outlined">send</span>Enviar</button>
+        </form>
+      </section>
+    </div>
+  </main>
+  <footer>Inteli &middot; Instituto de Tecnologia e Liderança &middot; Módulo 2, Trilha de Tecnologia</footer>
+  <script src="modelo.js"></script>
+  <script src="modelo_churn_dinamico.js"></script>
+  <script src="calcular_churn_dinamico.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var PLANOS_EXEMPLO = {
+      comercial: "Exemplo, substitua pelo plano do grupo.\n1. Conta com valor esperado acima de USD 500 mil: ligação do Account Manager em até 5 dias úteis, com revisão do mix comprado nos últimos 12 meses.\n2. Conta com receita dos 12 meses abaixo de metade do pico anual: proposta de renovação do parque instalado, sem desconto fora da tabela vigente.\n3. Nenhuma condição comercial é oferecida sem aprovação do gerente regional.",
+      atendimento: "Exemplo, substitua pelo plano do grupo.\n1. Conta com 4 meses ou mais desde a última compra: contato do time de atendimento para verificar chamados abertos e satisfação.\n2. Registrar no CRM o motivo informado pelo cliente.\n3. Escalar ao Comercial quando o cliente citar concorrente.",
+      posvendas: "Exemplo, substitua pelo plano do grupo.\n1. Conta com 3 meses ou menos de compra nos últimos 12: revisão técnica do parque e da garantia.\n2. Conta com contrato de serviço a vencer em 90 dias: oferta de extensão de garantia pela tabela vigente.\n3. Registrar no CRM toda visita técnica feita a conta da fila."
+    };
+    var AGENTES = ["atlas", "vera", "gilberto", "ciro"];
+    var AREAS = ["comercial", "atendimento", "posvendas"];
+
+    var $ = function (id) { return document.getElementById(id); };
+    var linhas = [];
+    var resultado = null;
+    var sessao = "painel-" + Math.random().toString(36).slice(2, 10);
+    var espera = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+    function ler(chave) { try { return localStorage.getItem(chave); } catch (e) { return null; } }
+    function gravar(chave, v) { try { localStorage.setItem(chave, v); } catch (e) { /* sem armazenamento */ } }
+    function esc(v) { return String(v).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+    var fmt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+    function dec(v, n) { return v.toLocaleString("pt-BR", { minimumFractionDigits: n, maximumFractionDigits: n }); }
+    function compacto(v) {
+      if (Math.abs(v) >= 1e6) return dec(v / 1e6, 1) + " mi";
+      if (Math.abs(v) >= 1e3) return dec(v / 1e3, 1) + " mil";
+      return fmt.format(v);
+    }
+    function trilha() {
+      $("t1").classList.toggle("feito", !!resultado);
+      $("t2").classList.toggle("feito", AREAS.every(function (a) { return $("plano-" + a).value.trim(); }));
+      $("t3").classList.toggle("feito", $("status-conexao").classList.contains("ok"));
+    }
+
+    // ---- 01 planilha e modelo
+    function etapa(nome, estado) {
+      var li = document.querySelector('#etapas li[data-e="' + nome + '"]');
+      li.className = estado;
+      li.querySelector(".material-symbols-outlined").textContent = estado === "feita" ? "check_circle" : "progress_activity";
+    }
+    function carregar(arquivo) {
+      $("nome-arquivo").className = "status";
+      $("nome-arquivo").textContent = arquivo.name;
+      $("etapas").classList.add("visivel");
+      ["ler", "colunas", "treino", "fila"].forEach(function (e) { etapa(e, ""); });
+      etapa("ler", "ativa");
+      var leitor = new FileReader();
+      leitor.onload = function (ev) {
+        espera(60).then(function () {
+          if (typeof XLSX === "undefined") throw new Error("a biblioteca de planilha não carregou. Confira a conexão.");
+          var csv = arquivo.name.toLowerCase().endsWith(".csv");
+          var wb = csv ? XLSX.read(ev.target.result, { type: "string" })
+                       : XLSX.read(new Uint8Array(ev.target.result), { type: "array", sheets: ["Dataset 1"], dense: true });
+          var aba = wb.Sheets["Dataset 1"] || wb.Sheets[wb.SheetNames[0]];
+          linhas = XLSX.utils.sheet_to_json(aba, { defval: "", raw: true });
+          var faltam = ["account_id", "periodo", "churn_label", "receita_usd", "qtd_pedidos"]
+            .filter(function (c) { return !(linhas[0] && c in linhas[0]); });
+          if (faltam.length) throw new Error("faltam as colunas " + faltam.join(", ") + ". Use a aba Dataset 1 da base do case.");
+          $("nome-arquivo").className = "status ok";
+          $("nome-arquivo").textContent = arquivo.name + ": " + fmt.format(linhas.length) + " linhas da aba Dataset 1";
+          etapa("ler", "feita"); etapa("colunas", "ativa");
+          return espera(350);
+        }).then(function () {
+          etapa("colunas", "feita"); etapa("treino", "ativa");
+          return espera(350);
+        }).then(function () {
+          calcular();
+          etapa("treino", "feita"); etapa("fila", "ativa");
+          return espera(300);
+        }).then(function () {
+          etapa("fila", "feita");
+        }).catch(function (e) {
+          $("nome-arquivo").className = "status erro";
+          $("nome-arquivo").textContent = "Não consegui usar o arquivo: " + e.message;
+          $("etapas").classList.remove("visivel");
+        });
+      };
+      if (arquivo.name.toLowerCase().endsWith(".csv")) leitor.readAsText(arquivo, "utf-8");
+      else leitor.readAsArrayBuffer(arquivo);
+    }
+    
+    window.exportarCSV = function (persona) {
+      if (!window.RISCO_LISTA || !window.RISCO_LISTA[persona]) return;
+      var lista = window.RISCO_LISTA[persona];
+      if (lista.length === 0) {
+        alert("Nenhum cliente em risco encontrado para " + persona);
+        return;
+      }
+      
+      var csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "account_id,persona,segment,industry,probabilidade_churn,dias_sem_comprar,receita_anualizada\n";
+      
+      lista.forEach(function(row) {
+        var prob = (row.probabilidade_churn * 100).toFixed(1) + "%";
+        var recency = Math.round(row.dias_sem_comprar);
+        var rev = Math.round(row.receita_anualizada);
+        csvContent += row.account_id + "," + row.persona + "," + row.segment + "," + row.industry + "," + prob + "," + recency + "," + rev + "\n";
+      });
+      
+      var encodedUri = encodeURI(csvContent);
+      var link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      var dateStr = new Date().toISOString().split('T')[0];
+      link.setAttribute("download", "clientes_risco_churn_" + persona + "_" + dateStr + ".csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    function calcular() {
+      if (!linhas.length) return;
+      var cap = Math.max(10, Math.min(500, parseInt($("capacidade").value, 10) || 138));
+      resultado = KovanModelo.rodar(linhas, cap);
+      window.KOVAN = resultado;   // para o teste e para quem quiser inspecionar no console
+      KovanModelo.guardar(KovanModelo.contexto(resultado));
+      var r = resultado;
+      $("resumo").hidden = false;
+      $("k-contas").textContent = fmt.format(r.contas);
+      $("k-auc").textContent = dec(r.auc, 3);
+      $("k-acertos").textContent = r.acertos_fila + " de " + r.fila.length;
+      $("k-esperado").textContent = compacto(r.valor_esperado_fila);
+      var maior = Math.max.apply(null, KovanModelo.COLUNAS.map(function (c) { return Math.abs(r.pesos[c]); }));
+      $("pesos").innerHTML = KovanModelo.COLUNAS.map(function (c) {
+        var v = r.pesos[c];
+        return "<code>" + c + "</code><div class=\"barra\"><span class=\"" + (v > 0 ? "mais" : "menos") +
+               "\" style=\"width:0\" data-l=\"" + (Math.abs(v) / maior * 50).toFixed(1) + "%\"></span></div><span>" +
+               (v > 0 ? "+" : "") + dec(v, 2) + "</span>";
+      }).join("");
+      setTimeout(function () {
+        document.querySelectorAll("#pesos .barra span").forEach(function (s) { s.style.width = s.dataset.l; });
+      }, 50);
+      var cols = [["posicao", "Pos."], ["account_id", "Conta"], ["segment", "Segmento"], ["escore", "Escore"],
+                  ["valor_em_risco", "Receita 12m"], ["valor_esperado", "Valor esperado"],
+                  ["meses_desde_ultima_compra", "Meses sem compra"], ["meses_com_compra_12m", "Meses com compra"]];
+      var html = "<thead><tr>" + cols.map(function (c) { return "<th>" + c[1] + "</th>"; }).join("") + "</tr></thead><tbody>";
+      r.fila.forEach(function (l) {
+        html += "<tr data-conta=\"" + esc(l.account_id) + "\"" + (l.churn ? " class=\"perdida\"" : "") + ">" + cols.map(function (c) {
+          var v = l[c[0]];
+          if (c[0] === "escore") return "<td class=\"n\">" + dec(v, 3) + "</td>";
+          if (typeof v === "number") return "<td class=\"n\">" + fmt.format(v) + "</td>";
+          return "<td>" + esc(v) + "</td>";
+        }).join("") + "</tr>";
+      });
+      $("tabela").innerHTML = html + "</tbody>";
+      aviso_chat("Modelo treinado: " + fmt.format(r.contas) + " contas, AUC " + dec(r.auc, 3) + ". Fila de " + r.fila.length + " contas pronta para a equipe.");
+      
+      // Chamada do modelo javascript dinâmico para os cards
+      if (typeof processarChurnDinamico === 'function') {
+        try {
+          var resultadoDinamico = processarChurnDinamico(linhas);
+          var risco = resultadoDinamico.risco;
+          var formatNumber = function(num) { return new Intl.NumberFormat('pt-BR').format(num); };
+          var arrM = risco.ARR / 1000000;
+          var kpiArr = document.getElementById('kpi-arr');
+          if (kpiArr) {
+            kpiArr.textContent = "US$ " + arrM.toFixed(1).replace('.', ',') + " M/ano";
+            kpiArr.style.fontSize = '32px';
+          }
+          var kpiNrr = document.getElementById('kpi-nrr');
+          if (kpiNrr && typeof risco.NRR !== 'undefined') {
+            kpiNrr.textContent = risco.NRR.toFixed(1).replace('.', ',') + "%";
+            kpiNrr.style.fontSize = '32px';
+          }
+          if (document.getElementById('kpi-p1')) { document.getElementById('kpi-p1').textContent = formatNumber(risco.P1); document.getElementById('btn-export-P1').style.display = 'block'; }
+          if (document.getElementById('kpi-p2')) { document.getElementById('kpi-p2').textContent = formatNumber(risco.P2); document.getElementById('btn-export-P2').style.display = 'block'; }
+          if (document.getElementById('kpi-p3')) { document.getElementById('kpi-p3').textContent = formatNumber(risco.P3); document.getElementById('btn-export-P3').style.display = 'block'; }
+          if (document.getElementById('kpi-p4')) { document.getElementById('kpi-p4').textContent = formatNumber(risco.P4); document.getElementById('btn-export-P4').style.display = 'block'; }
+          
+          window.RISCO_LISTA = resultadoDinamico.riscoLista;
+
+          // Renderizar o Gráfico Dinâmico
+          var chartData = resultadoDinamico.chartData;
+          if (chartData && typeof Chart !== 'undefined') {
+            var keys = Object.keys(chartData).sort();
+            var labels = [], dataP1 = [], dataP2 = [], dataP3 = [], dataP4 = [];
+            keys.forEach(function(k) {
+              var parts = k.split('-');
+              labels.push(parts[1] + '/' + parts[0]);
+              dataP1.push(chartData[k].P1 || 0);
+              dataP2.push(chartData[k].P2 || 0);
+              dataP3.push(chartData[k].P3 || 0);
+              dataP4.push(chartData[k].P4 || 0);
+            });
+            
+            var ctx = document.getElementById('churnChart').getContext('2d');
+            if (window.myChurnChart) { window.myChurnChart.destroy(); }
+            window.myChurnChart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: labels,
+                datasets: [
+                  { label: 'P1 (Champions)', data: dataP1, backgroundColor: '#34D399' },
+                  { label: 'P2 (Capex)', data: dataP2, backgroundColor: '#FBBF24' },
+                  { label: 'P3 (Recorrentes)', data: dataP3, backgroundColor: '#FB923C' },
+                  { label: 'P4 (Transacionais)', data: dataP4, backgroundColor: '#F43F5E' }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                  duration: 1000,
+                  easing: 'easeOutQuart'
+                },
+                scales: {
+                  x: { stacked: true, grid: { color: '#475569' }, ticks: { color: '#94A3B8' } },
+                  y: { stacked: true, grid: { color: '#475569' }, ticks: { color: '#94A3B8' } }
+                },
+                plugins: {
+                  legend: { labels: { color: '#94A3B8' } },
+                  tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                      footer: function(items) {
+                        var sum = 0;
+                        items.forEach(function(i) { sum += i.parsed.y; });
+                        return 'Total de Churn: ' + sum;
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          }
+          
+        } catch(e) {
+          console.error("Erro processando churn dinâmico:", e);
+        }
+      }
+      
+      trilha();
+    }
+    $("capacidade").addEventListener("change", calcular);
+    $("tabela").addEventListener("click", function (e) {
+      var tr = e.target.closest("tr[data-conta]");
+      if (!tr) return;
+      $("pergunta").value = "Explique por que a conta " + tr.dataset.conta + " está na fila e qual área deve agir.";
+      $("pergunta").focus();
+    });
+    var zona = $("soltar");
+    zona.addEventListener("click", function () { $("arquivo").click(); });
+    zona.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") $("arquivo").click(); });
+    $("arquivo").addEventListener("change", function () { if (this.files[0]) carregar(this.files[0]); });
+    ["dragenter", "dragover"].forEach(function (t) { zona.addEventListener(t, function (e) { e.preventDefault(); zona.classList.add("ativo"); }); });
+    ["dragleave", "drop"].forEach(function (t) { zona.addEventListener(t, function (e) { e.preventDefault(); zona.classList.remove("ativo"); }); });
+    zona.addEventListener("drop", function (e) { if (e.dataTransfer.files[0]) carregar(e.dataTransfer.files[0]); });
+
+    function contexto() { return KovanModelo.contexto(resultado); }
+    window.KovanContexto = function () { return resultado ? contexto() : null; };
+
+    // ---- 02 planos
+    AREAS.forEach(function (a) {
+      var t = $("plano-" + a);
+      t.value = ler("kovan-plano-" + a) || PLANOS_EXEMPLO[a];
+      t.addEventListener("input", function () { gravar("kovan-plano-" + a, t.value); trilha(); });
+    });
+    function planos() {
+      return { comercial: $("plano-comercial").value, atendimento: $("plano-atendimento").value,
+               "pós-vendas": $("plano-posvendas").value };
+    }
+    $("restaurar").addEventListener("click", function () {
+      AREAS.forEach(function (a) { $("plano-" + a).value = PLANOS_EXEMPLO[a]; gravar("kovan-plano-" + a, PLANOS_EXEMPLO[a]); });
+      trilha();
+    });
+    document.querySelectorAll(".abas button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll(".abas button").forEach(function (x) { x.setAttribute("aria-selected", x === b); });
+        document.querySelectorAll(".aba").forEach(function (x) { x.classList.toggle("ativa", x.dataset.aba === b.dataset.aba); });
+      });
+    });
+
+    // ---- modelo de linguagem
+    var sel = $("modelo-llm");
+    var salvo = ler("kovan-modelo-llm");
+    if (salvo && sel.querySelector('option[value="' + salvo + '"]')) sel.value = salvo;
+    $("modelo-outro").value = ler("kovan-modelo-outro") || "";
+    function mostrarOutro() { $("modelo-outro-caixa").hidden = sel.value !== "outro"; }
+    mostrarOutro();
+    sel.addEventListener("change", function () { gravar("kovan-modelo-llm", sel.value); mostrarOutro(); });
+    $("modelo-outro").addEventListener("change", function () { gravar("kovan-modelo-outro", this.value.trim()); });
+    function modeloLLM() { return sel.value === "outro" ? $("modelo-outro").value.trim() : sel.value; }
+
+    // ---- 03 conexão
+    $("endpoint").value = ler("kovan-endpoint") || "";
+    $("endpoint").addEventListener("change", function () { gravar("kovan-endpoint", this.value.trim()); });
+    function chamar(pergunta) {
+      var url = $("endpoint").value.trim();
+      if (!url) return Promise.reject(new Error("Configure o endpoint do n8n no bloco 03."));
+      var c = resultado ? contexto() : { modelo: null, contas: [] };
+      return fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sessao, pergunta: pergunta, modelo_llm: modeloLLM(),
+                               modelo: c.modelo, contas: c.contas, planos: planos() })
+      }).then(function (r) {
+        if (!r.ok) throw new Error("O n8n respondeu " + r.status + ". Confira se o workflow está ativo, se a URL é a de produção e se a credencial OpenRouter está escolhida nos três nós de modelo.");
+        return r.json();
+      }).then(function (j) { return Array.isArray(j) ? j[0] : j; });
+    }
+    $("testar").addEventListener("click", function () {
+      var s = $("status-conexao");
+      s.className = "status"; s.textContent = "testando, a equipe leva alguns segundos...";
+      chamar("Responda apenas: conexão ok.").then(function () {
+        s.className = "status ok"; s.textContent = "Conexão ok"; trilha();
+      }).catch(function (e) { s.className = "status erro"; s.textContent = e.message; trilha(); });
+    });
+
+    // ---- 04 a equipe
+    function estadoAgente(nome, estado) {
+      var el = document.querySelector('.agente[data-agente="' + nome + '"]');
+      el.classList.remove("trabalhando", "pronto");
+      var rotulo = el.querySelector(".estado");
+      if (estado === "trabalhando") { el.classList.add("trabalhando"); rotulo.innerHTML = 'trabalhando <span class="pontos"><span></span><span></span><span></span></span>'; }
+      else if (estado === "pronto") { el.classList.add("pronto"); rotulo.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">check_circle</span> concluído'; }
+      else rotulo.textContent = "aguardando";
+    }
+    /* O n8n devolve a resposta dos três de uma vez. Enquanto ela não chega, o
+       painel acende o agente que provavelmente está trabalhando: a ordem é a
+       do workflow, o tempo de cada um é estimativa. */
+    function animarEquipe() {
+      var i = 0;
+      AGENTES.forEach(function (a) { estadoAgente(a, "aguardando"); });
+      estadoAgente(AGENTES[0], "trabalhando");
+      var id = setInterval(function () {
+        if (i < AGENTES.length - 1) { estadoAgente(AGENTES[i], "pronto"); i++; estadoAgente(AGENTES[i], "trabalhando"); }
+      }, 5000);
+      return function () { clearInterval(id); };
+    }
+    function bolha(classe, texto) {
+      var d = document.createElement("div");
+      d.className = "msg " + classe; d.textContent = texto;
+      $("mensagens").appendChild(d); $("mensagens").scrollTop = $("mensagens").scrollHeight;
+      return d;
+    }
+    function aviso_chat(t) { bolha("aviso", t); }
+    function digitar(el, texto) {
+      var i = 0, passo = Math.max(2, Math.round(texto.length / 60));
+      return new Promise(function (ok) {
+        (function vai() {
+          i = Math.min(texto.length, i + passo);
+          el.textContent = texto.slice(0, i);
+          $("mensagens").scrollTop = $("mensagens").scrollHeight;
+          if (i < texto.length) setTimeout(vai, 16); else ok();
+        })();
+      });
+    }
+    function mensagemAgente(a) {
+      var nome = String(a.nome || "Agente"), chave = nome.toLowerCase();
+      var icones = { atlas: "query_stats", vera: "flag", gilberto: "campaign", ciro: "fact_check" };
+      var d = document.createElement("div");
+      d.className = "msg agente-msg"; d.dataset.agente = chave;
+      var texto = String(a.texto || "");
+      var selo = "";
+      var m = texto.match(/^\s*VEREDITO:\s*(aprovado|corrigido)[^\n]*\n*/i);
+      if (m) {
+        var corr = m[1].toLowerCase() === "corrigido";
+        selo = '<span class="selo' + (corr ? " corrigido" : "") + '"><span class="material-symbols-outlined" style="font-size:14px">' +
+               (corr ? "edit_note" : "verified") + "</span>" + (corr ? "corrigido" : "aprovado") + "</span>";
+        texto = texto.slice(m[0].length);
+      }
+      d.innerHTML = '<div class="quem"><span class="material-symbols-outlined">' + (icones[chave] || "smart_toy") + "</span>" +
+                    esc(nome) + " <small>" + esc(a.papel || "") + "</small>" + selo + '</div><div class="corpo"></div>';
+      $("mensagens").appendChild(d);
+      return digitar(d.querySelector(".corpo"), texto);
+    }
+    function perguntar(texto) {
+      texto = texto.trim();
+      if (!texto) return;
+      if (!resultado) { aviso_chat("Carregue a planilha no bloco 01 antes de perguntar."); return; }
+      bolha("eu", texto);
+      $("pergunta").value = "";
+      $("enviar").disabled = true;
+      var parar = animarEquipe(), t0 = performance.now(), modelo = modeloLLM();
+      chamar(texto).then(function (r) {
+        parar();
+        var agentes = r && r.agentes ? r.agentes : [{ nome: "Agente", papel: "", texto: (r && (r.resposta || r.output)) || JSON.stringify(r) }];
+        var cadeia = Promise.resolve();
+        agentes.forEach(function (a) {
+          cadeia = cadeia.then(function () {
+            var chave = String(a.nome || "").toLowerCase();
+            if (AGENTES.indexOf(chave) >= 0) estadoAgente(chave, "pronto");
+            return mensagemAgente(a);
+          });
+        });
+        return cadeia.then(function () {
+          bolha("rodape", "Equipe respondeu em " + Math.round((performance.now() - t0) / 1000) + " s, com " + (r.modelo || modelo) + ".");
+        });
+      }).catch(function (e) {
+        parar();
+        AGENTES.forEach(function (a) { estadoAgente(a, "aguardando"); });
+        bolha("aviso", e.message);
+      }).then(function () {
+        $("enviar").disabled = false;
+        $("t4").classList.add("feito");
+      });
+    }
+    $("form").addEventListener("submit", function (e) { e.preventDefault(); perguntar($("pergunta").value); });
+    $("pergunta").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); perguntar(this.value); }
+    });
+    document.querySelectorAll("#sugestoes button").forEach(function (b) {
+      b.addEventListener("click", function () { perguntar(b.textContent); });
+    });
+    trilha();
+  })();
+  </script>
+</body>
+</html>
